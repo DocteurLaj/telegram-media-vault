@@ -1,0 +1,2 @@
+-- Intentionally empty for production.
+-- Telegram Vault is populated by the connected Telegram account and backfill jobs.
