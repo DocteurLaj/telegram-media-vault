@@ -1,7 +1,27 @@
 {
   "name": "telegram-media-vault",
   "version": "0.1.0",
-  "private": true,
+  "description": "Open source Telegram media vault: index authorized Telegram groups into a private Netflix/Plex-like library with search, streaming, downloads, and PostgreSQL.",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DocteurLaj/telegram-media-vault.git"
+  },
+  "homepage": "https://github.com/DocteurLaj/telegram-media-vault#readme",
+  "bugs": {
+    "url": "https://github.com/DocteurLaj/telegram-media-vault/issues"
+  },
+  "keywords": [
+    "telegram",
+    "media-vault",
+    "nextjs",
+    "postgresql",
+    "streaming",
+    "self-hosted",
+    "media-library",
+    "gramjs"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
