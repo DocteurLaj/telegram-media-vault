@@ -69,7 +69,7 @@ export function MediaDetail({ id }: { id: string }) {
 
                 <div className="flex flex-wrap gap-2">
                   {playback && <a href={playback.src} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#5e6ad2] px-4 text-sm font-medium text-white"><Play className="h-4 w-4" /> Lire ici</a>}
-                  {item.filePath && <a href={`/api/media/${encodeURIComponent(item.id)}/file?download=1`} className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-sm text-[#d0d6e0]"><Download className="h-4 w-4" /> Télécharger</a>}
+                  {item.filePath && <a href={`/api/media/${encodeURIComponent(item.id)}/file?download=1`} download className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-sm text-[#d0d6e0]"><Download className="h-4 w-4" /> Télécharger sur mon appareil</a>}
                   {item.telegramUrl && <a href={item.telegramUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-sm text-[#d0d6e0]"><ExternalLink className="h-4 w-4" /> Ouvrir Telegram</a>}
                 </div>
               </div>

@@ -45,6 +45,7 @@ core.*
 *.session-journal
 *.tgz
 *.tar.gz
+.deploy-*.sh
 
 # vercel
 .vercel

@@ -1,10 +1,11 @@
 "use client";
 
-import { Download, ExternalLink, Play, Search } from "lucide-react";
+import { Download, ExternalLink, FolderKanban, Play, Search } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { type MediaItem, type MediaType, storageModeLabels, typeLabels } from "@/lib/media";
+import { buildSeriesCollections } from "@/lib/series";
 import { formatDate } from "@/lib/utils";
 
 const filters: Array<MediaType | "all"> = ["all", "movie", "series", "anime", "manga", "book", "other"];
@@ -43,13 +44,20 @@ export function MediaVaultDashboard() {
     return map;
   }, [items]);
 
+  const collections = useMemo(() => buildSeriesCollections(filtered), [filtered]);
+  const gridItems = useMemo(() => {
+    if (type === "series") return filtered.filter((item) => item.type !== "series");
+    if (type === "anime") return filtered.filter((item) => item.type !== "anime");
+    return filtered;
+  }, [filtered, type]);
+
   return (
     <AppShell active="library">
       <div className="space-y-5">
         <header className="flex flex-col gap-3 border-b border-white/[0.06] pb-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-medium tracking-[-0.03em] text-[#f7f8f8]">Médiathèque</h1>
-            <p className="mt-1 text-sm text-[#8a8f98]">Regarder, ouvrir ou télécharger les contenus récupérés depuis Telegram.</p>
+            <p className="mt-1 text-sm text-[#8a8f98]">Regarder depuis le site ou télécharger les fichiers du VPS sur l’appareil ouvert.</p>
           </div>
           <div className="text-xs text-[#62666d]">{source} · {items.length} médias</div>
         </header>
@@ -62,7 +70,7 @@ export function MediaVaultDashboard() {
             </label>
             <div className="flex gap-2 overflow-x-auto pb-1 lg:pb-0">
               {filters.map((filter) => (
-                <button key={filter} onClick={() => setType(filter)} className={`shrink-0 rounded-lg border px-3 py-2 text-sm ${type === filter ? "border-[#7170ff]/60 bg-[#5e6ad2]/20 text-[#f7f8f8]" : "border-white/[0.08] text-[#8a8f98] hover:bg-white/[0.04]"}`}>
+                <button key={filter} onClick={() => setType(filter)} className={`min-h-11 shrink-0 rounded-lg border px-3 py-2 text-sm ${type === filter ? "border-[#7170ff]/60 bg-[#5e6ad2]/20 text-[#f7f8f8]" : "border-white/[0.08] text-[#8a8f98] hover:bg-white/[0.04]"}`}>
                   {filter === "all" ? "Tout" : typeLabels[filter]} <span className="text-[#62666d]">{counts.get(filter) ?? 0}</span>
                 </button>
               ))}
@@ -76,32 +84,84 @@ export function MediaVaultDashboard() {
             <p className="mt-1 max-w-md text-sm text-[#8a8f98]">Active une source dans “Sources”, puis lance Import historique. Les vidéos/fichiers apparaîtront ici.</p>
           </section>
         ) : (
-          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {filtered.map((item) => (
-              <article key={item.id} className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] transition hover:border-[#7170ff]/40 hover:bg-white/[0.04]">
-                <Link href={`/media/${encodeURIComponent(item.id)}`} className="block">
-                  <div className="relative flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(113,112,255,.35),transparent_35%),linear-gradient(135deg,#191a1b,#08090a)]">
-                    <Play className="h-10 w-10 rounded-full bg-black/30 p-2 text-white" />
-                    <span className="absolute left-3 top-3 rounded-full bg-black/45 px-2 py-1 text-xs text-[#d0d6e0]">{typeLabels[item.type]}</span>
+          <>
+            {collections.length > 0 && (type === "all" || type === "series" || type === "anime") && (
+              <section className="space-y-3 rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-medium">Collections séries</h2>
+                    <p className="text-xs text-[#8a8f98]">Les épisodes sont rangés par série, puis par saison.</p>
                   </div>
-                </Link>
-                <div className="space-y-3 p-3">
-                  <div className="min-w-0">
-                    <h2 className="truncate text-sm font-medium">{item.title}</h2>
-                    <p className="mt-1 truncate text-xs text-[#8a8f98]">{item.sourceGroup} · {item.quality || item.format} · {item.size}</p>
-                    <p className="mt-1 text-xs text-[#62666d]">{storageModeLabels[item.storageMode]} · {formatDate(item.postedAt)}</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Link href={`/media/${encodeURIComponent(item.id)}`} className="inline-flex h-9 items-center justify-center gap-1 rounded-lg bg-[#5e6ad2] px-2 text-xs font-medium text-white"><Play className="h-3.5 w-3.5" /> Lire</Link>
-                    {item.filePath ? <a href={`/api/media/${encodeURIComponent(item.id)}/file`} className="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-white/[0.08] px-2 text-xs text-[#d0d6e0]"><Download className="h-3.5 w-3.5" /> Fichier</a> : <span className="inline-flex h-9 items-center justify-center rounded-lg border border-white/[0.04] px-2 text-xs text-[#62666d]">Pas local</span>}
-                    {item.telegramUrl ? <a href={item.telegramUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-white/[0.08] px-2 text-xs text-[#d0d6e0]"><ExternalLink className="h-3.5 w-3.5" /> TG</a> : <span className="inline-flex h-9 items-center justify-center rounded-lg border border-white/[0.04] px-2 text-xs text-[#62666d]">TG</span>}
-                  </div>
+                  <span className="text-xs text-[#62666d]">{collections.length} collections</span>
                 </div>
-              </article>
-            ))}
-          </section>
+                <div className="grid gap-3 xl:grid-cols-2">
+                  {collections.map((collection) => (
+                    <article key={collection.key} className="rounded-xl border border-white/[0.08] bg-[#0f1011] p-3">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-sm font-medium">{collection.title}</h3>
+                          <p className="mt-1 text-xs text-[#8a8f98]">{collection.episodeCount} épisodes · {collection.seasons.length} saison(s)</p>
+                        </div>
+                        <FolderKanban className="h-5 w-5 shrink-0 text-[#7170ff]" />
+                      </div>
+                      <div className="space-y-3">
+                        {collection.seasons.map((season) => (
+                          <div key={season.season} className="rounded-lg border border-white/[0.06] p-2">
+                            <div className="mb-2 text-xs font-medium text-[#d0d6e0]">Saison {season.season}</div>
+                            <div className="space-y-1">
+                              {season.items.slice(0, 8).map((episode) => (
+                                <div key={episode.id} className="grid grid-cols-[1fr_auto] items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/[0.04]">
+                                  <Link href={`/media/${encodeURIComponent(episode.id)}`} className="min-w-0 truncate text-xs text-[#d0d6e0]">E{episode.episode ?? "?"} · {episode.title}</Link>
+                                  <div className="flex gap-1">
+                                    <Link href={`/media/${encodeURIComponent(episode.id)}`} className="rounded-md bg-[#5e6ad2] px-2 py-1 text-[11px] text-white">Lire</Link>
+                                    {episode.filePath && <a href={`/api/media/${encodeURIComponent(episode.id)}/file?download=1`} download className="rounded-md border border-white/[0.08] px-2 py-1 text-[11px] text-[#d0d6e0]">Télécharger</a>}
+                                  </div>
+                                </div>
+                              ))}
+                              {season.items.length > 8 && <div className="px-2 py-1 text-xs text-[#62666d]">+ {season.items.length - 8} épisode(s) de plus</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {gridItems.length > 0 && (
+              <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {gridItems.map((item) => <MediaCard key={item.id} item={item} />)}
+              </section>
+            )}
+          </>
         )}
       </div>
     </AppShell>
+  );
+}
+
+function MediaCard({ item }: { item: MediaItem }) {
+  return (
+    <article className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] transition hover:border-[#7170ff]/40 hover:bg-white/[0.04]">
+      <Link href={`/media/${encodeURIComponent(item.id)}`} className="block">
+        <div className="relative flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(113,112,255,.35),transparent_35%),linear-gradient(135deg,#191a1b,#08090a)]">
+          <Play className="h-10 w-10 rounded-full bg-black/30 p-2 text-white" />
+          <span className="absolute left-3 top-3 rounded-full bg-black/45 px-2 py-1 text-xs text-[#d0d6e0]">{typeLabels[item.type]}</span>
+        </div>
+      </Link>
+      <div className="space-y-3 p-3">
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-medium">{item.title}</h2>
+          <p className="mt-1 truncate text-xs text-[#8a8f98]">{item.sourceGroup} · {item.quality || item.format} · {item.size}</p>
+          <p className="mt-1 text-xs text-[#62666d]">{storageModeLabels[item.storageMode]} · {formatDate(item.postedAt)}</p>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <Link href={`/media/${encodeURIComponent(item.id)}`} className="inline-flex h-10 items-center justify-center gap-1 rounded-lg bg-[#5e6ad2] px-2 text-xs font-medium text-white"><Play className="h-3.5 w-3.5" /> Lire</Link>
+          {item.filePath ? <a href={`/api/media/${encodeURIComponent(item.id)}/file?download=1`} download className="inline-flex h-10 items-center justify-center gap-1 rounded-lg border border-white/[0.08] px-2 text-xs text-[#d0d6e0]"><Download className="h-3.5 w-3.5" /> Télécharger</a> : <span className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.04] px-2 text-xs text-[#62666d]">Pas local</span>}
+          {item.telegramUrl ? <a href={item.telegramUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-1 rounded-lg border border-white/[0.08] px-2 text-xs text-[#d0d6e0]"><ExternalLink className="h-3.5 w-3.5" /> TG</a> : <span className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.04] px-2 text-xs text-[#62666d]">TG</span>}
+        </div>
+      </div>
+    </article>
   );
 }
