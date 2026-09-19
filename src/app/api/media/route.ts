@@ -17,14 +17,15 @@ function buildCategories(items: MediaItem[]) {
 export async function GET() {
   try {
     const databaseItems = await fetchMediaFromDatabase();
-    const items = databaseItems?.length ? databaseItems : seedMediaItems;
+    const items = databaseItems ?? seedMediaItems;
+    const fromDatabase = databaseItems !== null;
 
     return NextResponse.json({
       items,
-      categories: databaseItems?.length ? buildCategories(items) : seedCategories,
+      categories: fromDatabase ? buildCategories(items) : seedCategories,
       meta: {
         total: items.length,
-        source: databaseItems?.length ? "postgres" : "seed",
+        source: fromDatabase ? "postgres" : "seed",
         generatedAt: new Date().toISOString(),
       },
     });
