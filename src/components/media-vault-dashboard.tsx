@@ -10,11 +10,11 @@ import { formatDate } from "@/lib/utils";
 
 const filters: Array<MediaType | "all"> = ["all", "movie", "series", "anime", "manga", "book", "other"];
 
-export function MediaVaultDashboard() {
+export function MediaVaultDashboard({ initialItems = [], initialSource = "loading" }: { initialItems?: MediaItem[]; initialSource?: string }) {
   const [query, setQuery] = useState("");
   const [type, setType] = useState<MediaType | "all">("all");
-  const [items, setItems] = useState<MediaItem[]>([]);
-  const [source, setSource] = useState("loading");
+  const [items, setItems] = useState<MediaItem[]>(initialItems);
+  const [source, setSource] = useState(initialSource);
 
   async function loadMedia() {
     const response = await fetch("/api/media", { cache: "no-store" });
@@ -71,7 +71,7 @@ export function MediaVaultDashboard() {
         <header className="flex flex-col gap-3 border-b border-white/[0.06] pb-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-medium tracking-[-0.03em] text-[#f7f8f8]">Médiathèque</h1>
-            <p className="mt-1 text-sm text-[#8a8f98]">Regarder depuis le site ou télécharger les fichiers du VPS sur l’appareil ouvert.</p>
+            <p className="mt-1 text-sm text-[#8a8f98]">Regarder depuis Telegram via le lecteur du site ou télécharger sur l’appareil ouvert.</p>
           </div>
           <div className="text-xs text-[#62666d]">{source} · {items.length} médias</div>
         </header>

@@ -118,8 +118,8 @@ export async function fetchMediaFromDatabase(): Promise<MediaItem[] | null> {
   const result = await db.query<MediaRow>(`
     ${mediaSelect}
     where m.file_path is not null or m.telegram_url is not null
-    order by m.posted_at desc, m.created_at desc
-    limit 300
+    order by coalesce(m.posted_at, m.created_at) desc
+    limit 1000
   `);
 
   return result.rows.map(mapMediaRow);
