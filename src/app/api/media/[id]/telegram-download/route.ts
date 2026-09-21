@@ -12,6 +12,24 @@ function filename(title: string, format: string | null) {
   return `${title}.${format.toLowerCase()}`;
 }
 
+function contentTypeFor(format: string | null | undefined) {
+  switch ((format || "").toUpperCase()) {
+    case "MP4":
+    case "M4V":
+      return "video/mp4";
+    case "WEBM":
+      return "video/webm";
+    case "MKV":
+      return "video/x-matroska";
+    case "AVI":
+      return "video/x-msvideo";
+    case "MOV":
+      return "video/quicktime";
+    default:
+      return "application/octet-stream";
+  }
+}
+
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
   const ref = await fetchTelegramMediaRef(id);
@@ -45,7 +63,7 @@ export async function GET(_request: Request, { params }: Params) {
 
   return new Response(stream, {
     headers: {
-      "content-type": "application/octet-stream",
+      "Content-Type": contentTypeFor(ref.format),
       "content-length": String(ref.sizeBytes),
       "content-disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename(ref.title, ref.format))}`,
       "cache-control": "no-store",
