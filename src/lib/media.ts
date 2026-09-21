@@ -18,6 +18,7 @@ export type MediaItem = {
   postedAt: string;
   telegramUrl: string;
   filePath?: string;
+  thumbnailPath?: string;
   storageMode: StorageMode;
   description: string;
   tags: string[];

@@ -24,6 +24,7 @@ type MediaRow = {
   quality: string | null;
   size_bytes: number | null;
   file_path: string | null;
+  thumbnail_path: string | null;
   telegram_url: string | null;
   description: string | null;
   tags: string | string[] | null;
@@ -33,10 +34,11 @@ type MediaRow = {
   source_group: string | null;
 };
 
-function formatBytes(value: number | null) {
-  if (!value) return "—";
+function formatBytes(value: number | string | null) {
+  const numeric = typeof value === "string" ? Number(value) : value;
+  if (!numeric || !Number.isFinite(numeric)) return "—";
   const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = value;
+  let size = numeric;
   let unit = 0;
   while (size >= 1024 && unit < units.length - 1) {
     size /= 1024;
@@ -71,6 +73,7 @@ const mediaSelect = `
     m.quality,
     m.size_bytes,
     m.file_path,
+    m.thumbnail_path,
     m.telegram_url,
     m.description,
     m.tags,
@@ -100,6 +103,7 @@ function mapMediaRow(row: MediaRow): MediaItem {
     postedAt: row.posted_at instanceof Date ? row.posted_at.toISOString() : row.posted_at,
     telegramUrl: row.telegram_url ?? "",
     filePath: row.file_path ?? undefined,
+    thumbnailPath: row.thumbnail_path ?? undefined,
     storageMode: row.storage_mode ?? "links",
     description: row.description ?? "Contenu indexé depuis Telegram.",
     tags: parseTags(row.tags),
@@ -139,4 +143,53 @@ export async function fetchMediaFilePath(id: string): Promise<{ path: string; ti
   const row = result.rows[0];
   if (!row?.file_path) return null;
   return { path: row.file_path, title: row.title, format: row.format };
+}
+
+export type TelegramMediaRef = {
+  id: string;
+  title: string;
+  format: string | null;
+  sizeBytes: number | null;
+  telegramMessageId: string;
+  sourceGroupId: string;
+  sourceTelegramId: string;
+  sourceUsername: string | null;
+  thumbnailPath: string | null;
+};
+
+export async function fetchTelegramMediaRef(id: string): Promise<TelegramMediaRef | null> {
+  const db = getPool();
+  if (!db) return null;
+  const result = await db.query<{
+    id: string;
+    title: string;
+    format: string | null;
+    size_bytes: number | null;
+    telegram_message_id: string;
+    source_group_id: string;
+    telegram_id: string;
+    username: string | null;
+    thumbnail_path: string | null;
+  }>(
+    `select m.id, m.title, m.format, m.size_bytes, m.telegram_message_id, m.source_group_id,
+            s.telegram_id, s.username, m.thumbnail_path
+     from media_items m
+     join source_groups s on s.id = m.source_group_id
+     where m.id=$1
+     limit 1`,
+    [id],
+  );
+  const row = result.rows[0];
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    format: row.format,
+    sizeBytes: row.size_bytes,
+    telegramMessageId: row.telegram_message_id,
+    sourceGroupId: row.source_group_id,
+    sourceTelegramId: row.telegram_id,
+    sourceUsername: row.username,
+    thumbnailPath: row.thumbnail_path,
+  };
 }

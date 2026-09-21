@@ -46,6 +46,7 @@ core.*
 *.tgz
 *.tar.gz
 .deploy-*.sh
+.links-mode.sql
 
 # vercel
 .vercel

@@ -51,6 +51,20 @@ export function MediaVaultDashboard() {
     return filtered;
   }, [filtered, type]);
 
+  function downloadItemsToDevice(episodes: MediaItem[]) {
+    for (const [index, episode] of episodes.entries()) {
+      window.setTimeout(() => {
+        const link = document.createElement("a");
+        link.href = episode.filePath ? `/api/media/${encodeURIComponent(episode.id)}/file?download=1` : `/api/media/${encodeURIComponent(episode.id)}/telegram-download`;
+        link.download = episode.title;
+        link.rel = "noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }, index * 700);
+    }
+  }
+
   return (
     <AppShell active="library">
       <div className="space-y-5">
@@ -104,6 +118,7 @@ export function MediaVaultDashboard() {
                         </div>
                         <FolderKanban className="h-5 w-5 shrink-0 text-[#7170ff]" />
                       </div>
+                      <button onClick={() => downloadItemsToDevice(collection.seasons.flatMap((season) => season.items))} className="mb-3 inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs text-[#d0d6e0]"><Download className="h-3.5 w-3.5" /> Télécharger la collection sur mon appareil</button>
                       <div className="space-y-3">
                         {collection.seasons.map((season) => (
                           <div key={season.season} className="rounded-lg border border-white/[0.06] p-2">
@@ -114,7 +129,7 @@ export function MediaVaultDashboard() {
                                   <Link href={`/media/${encodeURIComponent(episode.id)}`} className="min-w-0 truncate text-xs text-[#d0d6e0]">E{episode.episode ?? "?"} · {episode.title}</Link>
                                   <div className="flex gap-1">
                                     <Link href={`/media/${encodeURIComponent(episode.id)}`} className="rounded-md bg-[#5e6ad2] px-2 py-1 text-[11px] text-white">Lire</Link>
-                                    {episode.filePath && <a href={`/api/media/${encodeURIComponent(episode.id)}/file?download=1`} download className="rounded-md border border-white/[0.08] px-2 py-1 text-[11px] text-[#d0d6e0]">Télécharger</a>}
+                                    <a href={episode.filePath ? `/api/media/${encodeURIComponent(episode.id)}/file?download=1` : `/api/media/${encodeURIComponent(episode.id)}/telegram-download`} download className="rounded-md border border-white/[0.08] px-2 py-1 text-[11px] text-[#d0d6e0]">Télécharger</a>
                                   </div>
                                 </div>
                               ))}
@@ -146,7 +161,12 @@ function MediaCard({ item }: { item: MediaItem }) {
     <article className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] transition hover:border-[#7170ff]/40 hover:bg-white/[0.04]">
       <Link href={`/media/${encodeURIComponent(item.id)}`} className="block">
         <div className="relative flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(113,112,255,.35),transparent_35%),linear-gradient(135deg,#191a1b,#08090a)]">
-          <Play className="h-10 w-10 rounded-full bg-black/30 p-2 text-white" />
+          {item.thumbnailPath ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/api/media/${encodeURIComponent(item.id)}/thumbnail`} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <Play className="h-10 w-10 rounded-full bg-black/30 p-2 text-white" />
+          )}
           <span className="absolute left-3 top-3 rounded-full bg-black/45 px-2 py-1 text-xs text-[#d0d6e0]">{typeLabels[item.type]}</span>
         </div>
       </Link>
@@ -158,7 +178,7 @@ function MediaCard({ item }: { item: MediaItem }) {
         </div>
         <div className="grid grid-cols-3 gap-2">
           <Link href={`/media/${encodeURIComponent(item.id)}`} className="inline-flex h-10 items-center justify-center gap-1 rounded-lg bg-[#5e6ad2] px-2 text-xs font-medium text-white"><Play className="h-3.5 w-3.5" /> Lire</Link>
-          {item.filePath ? <a href={`/api/media/${encodeURIComponent(item.id)}/file?download=1`} download className="inline-flex h-10 items-center justify-center gap-1 rounded-lg border border-white/[0.08] px-2 text-xs text-[#d0d6e0]"><Download className="h-3.5 w-3.5" /> Télécharger</a> : <span className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.04] px-2 text-xs text-[#62666d]">Pas local</span>}
+          <a href={item.filePath ? `/api/media/${encodeURIComponent(item.id)}/file?download=1` : `/api/media/${encodeURIComponent(item.id)}/telegram-download`} download className="inline-flex h-10 items-center justify-center gap-1 rounded-lg border border-white/[0.08] px-2 text-xs text-[#d0d6e0]"><Download className="h-3.5 w-3.5" /> Télécharger</a>
           {item.telegramUrl ? <a href={item.telegramUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center justify-center gap-1 rounded-lg border border-white/[0.08] px-2 text-xs text-[#d0d6e0]"><ExternalLink className="h-3.5 w-3.5" /> TG</a> : <span className="inline-flex h-10 items-center justify-center rounded-lg border border-white/[0.04] px-2 text-xs text-[#62666d]">TG</span>}
         </div>
       </div>

@@ -8,6 +8,8 @@ const { NewMessage } = require("telegram/events");
 
 const DATABASE_URL = process.env.DATABASE_URL;
 const DOWNLOAD_DIR = process.env.SCRAPER_DOWNLOAD_DIR || "/app/storage/downloads";
+const THUMBNAIL_DIR = process.env.SCRAPER_THUMBNAIL_DIR || "/app/storage/thumbnails";
+const DISABLE_MEDIA_DOWNLOADS = process.env.SCRAPER_DISABLE_MEDIA_DOWNLOADS !== "false";
 const POLL_GROUPS_MS = Number(process.env.SCRAPER_POLL_GROUPS_MS || 60000);
 const POLL_BACKFILL_MS = Number(process.env.SCRAPER_POLL_BACKFILL_MS || 15000);
 
@@ -93,6 +95,7 @@ async function syncDialogs() {
 }
 
 async function downloadIfNeeded(group, mode, message) {
+  if (DISABLE_MEDIA_DOWNLOADS) return null;
   if (!["download", "both"].includes(mode) || !message.media) return null;
   try {
     const buffer = await client.downloadMedia(message.media, {});
@@ -109,6 +112,29 @@ async function downloadIfNeeded(group, mode, message) {
   }
 }
 
+async function downloadThumbnail(group, message) {
+  if (!message.media) return { path: null, status: "missing" };
+  const thumbs = message.document?.thumbs || message.media?.document?.thumbs || message.photo?.sizes || message.media?.photo?.sizes || [];
+  const thumb = thumbs.length ? thumbs[thumbs.length - 1] : null;
+  if (!thumb) return { path: null, status: "missing" };
+  try {
+    const buffer = await client.downloadMedia(message.media, { thumb });
+    if (!buffer || typeof buffer === "string" || !buffer.length) return { path: null, status: "missing" };
+    if (buffer.length > 512 * 1024) {
+      await event("warning", "thumbnail_too_large", `Miniature ignorée (${buffer.length} bytes)`, group.id);
+      return { path: null, status: "failed" };
+    }
+    const groupDir = path.join(THUMBNAIL_DIR, group.id);
+    await fs.mkdir(groupDir, { recursive: true });
+    const filePath = path.join(groupDir, `${message.id}.jpg`);
+    await fs.writeFile(filePath, buffer);
+    return { path: filePath, status: "ready" };
+  } catch (error) {
+    await event("warning", "thumbnail_failed", error.message, group.id);
+    return { path: null, status: "failed" };
+  }
+}
+
 async function indexMessage(message, explicitGroup = null) {
   const chatId = String(message.chatId?.value ?? message.peerId?.channelId?.value ?? message.peerId?.chatId?.value ?? "");
   const group = explicitGroup || activeGroups.get(chatId) || activeGroups.get(`-100${chatId}`);
@@ -120,19 +146,22 @@ async function indexMessage(message, explicitGroup = null) {
   if (!message.media && !fileName) return false;
   const data = classify(fileName, text);
   const localPath = await downloadIfNeeded(group, mode, message);
-  const telegramUrl = ["links", "both"].includes(mode) ? publicMessageUrl(group, message.id) : null;
+  const thumbnail = await downloadThumbnail(group, message);
+  const telegramUrl = ["links", "both", "download"].includes(mode) ? publicMessageUrl(group, message.id) : null;
 
   await query(
     `insert into media_items(
       id, telegram_message_id, source_group_id, title, type, genre, language,
       season, episode, format, quality, size_bytes, storage_mode, file_path,
-      telegram_url, description, tags, status, posted_at
-    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+      thumbnail_path, thumbnail_status, telegram_url, description, tags, status, posted_at
+    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
     on conflict(source_group_id, telegram_message_id) do update set
       title=excluded.title, type=excluded.type, genre=excluded.genre, language=excluded.language,
       season=excluded.season, episode=excluded.episode, format=excluded.format, quality=excluded.quality,
       size_bytes=coalesce(excluded.size_bytes, media_items.size_bytes), storage_mode=excluded.storage_mode,
       file_path=coalesce(excluded.file_path, media_items.file_path),
+      thumbnail_path=coalesce(excluded.thumbnail_path, media_items.thumbnail_path),
+      thumbnail_status=case when coalesce(excluded.thumbnail_path, media_items.thumbnail_path) is not null then 'ready' else excluded.thumbnail_status end,
       telegram_url=excluded.telegram_url, description=excluded.description, tags=excluded.tags,
       status=case when coalesce(excluded.file_path, media_items.file_path) is not null then 'downloaded' else excluded.status end, posted_at=excluded.posted_at, updated_at=current_timestamp`,
     [
@@ -150,6 +179,8 @@ async function indexMessage(message, explicitGroup = null) {
       message.file?.size ? Number(message.file.size) : null,
       mode,
       localPath,
+      thumbnail.path,
+      thumbnail.status,
       telegramUrl,
       text || "Contenu indexé depuis Telegram.",
       JSON.stringify([data.type, data.language]),

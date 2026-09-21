@@ -19,7 +19,7 @@ type SourceGroup = {
   backfill_error?: string | null;
 };
 
-const modes: StorageMode[] = ["links", "download", "both"];
+const modes: StorageMode[] = ["links"];
 
 export function GroupsPanel() {
   const [groups, setGroups] = useState<SourceGroup[]>([]);
@@ -86,7 +86,7 @@ export function GroupsPanel() {
       <div className="space-y-5">
         <header className="border-b border-white/[0.06] pb-5">
           <h1 className="text-2xl font-medium tracking-[-0.03em]">Sources Telegram</h1>
-          <p className="mt-1 text-sm text-[#8a8f98]">Groupes, activation, stockage et import historique.</p>
+          <p className="mt-1 text-sm text-[#8a8f98]">Groupes Telegram, indexation sans téléchargement VPS, import historique et streaming direct.</p>
         </header>
         {message && <div className="rounded-lg border border-[#7170ff]/30 bg-[#5e6ad2]/15 px-3 py-2 text-sm text-[#d0d6e0]">{message}</div>}
 

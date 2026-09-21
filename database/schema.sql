@@ -25,6 +25,8 @@ create table if not exists media_items (
   size_bytes bigint,
   storage_mode text default 'links' check (storage_mode in ('links', 'download', 'both')),
   file_path text,
+  thumbnail_path text,
+  thumbnail_status text default 'missing' check (thumbnail_status in ('missing', 'ready', 'failed')),
   telegram_url text,
   description text,
   tags text default '[]',
@@ -66,6 +68,9 @@ create table if not exists telegram_accounts (
 alter table telegram_accounts add column if not exists session_string text;
 alter table telegram_accounts add column if not exists phone_code_hash text;
 alter table telegram_accounts add column if not exists code_requested_at text;
+
+alter table media_items add column if not exists thumbnail_path text;
+alter table media_items add column if not exists thumbnail_status text default 'missing';
 
 create table if not exists telegram_scraper_events (
   id bigserial primary key,

@@ -25,10 +25,11 @@ export function MediaDetail({ id }: { id: string }) {
   }, [id]);
 
   const playback = useMemo(() => {
-    if (!item?.filePath || !videoTypes.has(item.type)) return null;
+    if (!item || !videoTypes.has(item.type)) return null;
+    if (!item.filePath) return { src: `/api/media/${encodeURIComponent(item.id)}/stream`, transcoded: false, telegram: true };
     const format = (item.format || "").toUpperCase();
-    if (browserVideoFormats.has(format)) return { src: `/api/media/${encodeURIComponent(item.id)}/file`, transcoded: false };
-    if (transcodableVideoFormats.has(format)) return { src: `/api/media/${encodeURIComponent(item.id)}/watch`, transcoded: true };
+    if (browserVideoFormats.has(format)) return { src: `/api/media/${encodeURIComponent(item.id)}/file`, transcoded: false, telegram: false };
+    if (transcodableVideoFormats.has(format)) return { src: `/api/media/${encodeURIComponent(item.id)}/watch`, transcoded: true, telegram: false };
     return null;
   }, [item]);
 
@@ -45,8 +46,9 @@ export function MediaDetail({ id }: { id: string }) {
             <section className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[#050505]">
               {playback ? (
                 <div className="bg-black">
-                  <video className="aspect-video w-full bg-black" controls playsInline preload="metadata" src={playback.src} />
+                  <video className="aspect-video w-full bg-black" controls playsInline preload="metadata" poster={item.thumbnailPath ? `/api/media/${encodeURIComponent(item.id)}/thumbnail` : undefined} src={playback.src} />
                   {playback.transcoded && <p className="border-t border-white/[0.08] px-4 py-2 text-xs text-[#8a8f98]">Lecture directe activée par transcodage MP4 à la volée. Si le réseau est lent, utilise Télécharger.</p>}
+                  {playback.telegram && <p className="border-t border-white/[0.08] px-4 py-2 text-xs text-[#8a8f98]">Lecture en proxy depuis Telegram, sans sauvegarder la vidéo sur le VPS. Avance/pause selon support Range Telegram.</p>}
                 </div>
               ) : (
                 <div className="flex aspect-video flex-col items-center justify-center gap-3 bg-[radial-gradient(circle_at_30%_20%,rgba(113,112,255,.35),transparent_35%),linear-gradient(135deg,#191a1b,#050505)] px-4 text-center">
@@ -69,7 +71,7 @@ export function MediaDetail({ id }: { id: string }) {
 
                 <div className="flex flex-wrap gap-2">
                   {playback && <a href={playback.src} className="inline-flex h-10 items-center gap-2 rounded-lg bg-[#5e6ad2] px-4 text-sm font-medium text-white"><Play className="h-4 w-4" /> Lire ici</a>}
-                  {item.filePath && <a href={`/api/media/${encodeURIComponent(item.id)}/file?download=1`} download className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-sm text-[#d0d6e0]"><Download className="h-4 w-4" /> Télécharger sur mon appareil</a>}
+                  <a href={item.filePath ? `/api/media/${encodeURIComponent(item.id)}/file?download=1` : `/api/media/${encodeURIComponent(item.id)}/telegram-download`} download className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-sm text-[#d0d6e0]"><Download className="h-4 w-4" /> Télécharger sur mon appareil</a>
                   {item.telegramUrl && <a href={item.telegramUrl} target="_blank" rel="noreferrer" className="inline-flex h-10 items-center gap-2 rounded-lg border border-white/[0.08] px-4 text-sm text-[#d0d6e0]"><ExternalLink className="h-4 w-4" /> Ouvrir Telegram</a>}
                 </div>
               </div>
