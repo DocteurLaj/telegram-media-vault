@@ -109,16 +109,21 @@ export function MediaVaultDashboard({ initialItems = [], initialSource = "loadin
                   <span className="text-xs text-[#62666d]">{collections.length} collections</span>
                 </div>
                 <div className="grid gap-3 xl:grid-cols-2">
-                  {collections.map((collection) => (
-                    <article key={collection.key} className="rounded-xl border border-white/[0.08] bg-[#0f1011] p-3">
-                      <div className="mb-3 flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <h3 className="truncate text-sm font-medium">{collection.title}</h3>
-                          <p className="mt-1 text-xs text-[#8a8f98]">{collection.episodeCount} épisodes · {collection.seasons.length} saison(s)</p>
+                  {collections.map((collection) => {
+                    const collectionItems = collection.seasons.flatMap((season) => season.items);
+                    const posterItem = collectionItems.find((item) => item.thumbnailPath) ?? collectionItems[0];
+                    return (
+                    <article key={collection.key} className="overflow-hidden rounded-xl border border-white/[0.08] bg-[#0f1011]">
+                      <PosterFrame item={posterItem} title={collection.title} subtitle={`${collection.episodeCount} épisodes · ${collection.seasons.length} saison(s)`} badge="Collection" />
+                      <div className="p-3">
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <h3 className="truncate text-sm font-medium">{collection.title}</h3>
+                            <p className="mt-1 text-xs text-[#8a8f98]">{collection.episodeCount} épisodes · {collection.seasons.length} saison(s)</p>
+                          </div>
+                          <FolderKanban className="h-5 w-5 shrink-0 text-[#7170ff]" />
                         </div>
-                        <FolderKanban className="h-5 w-5 shrink-0 text-[#7170ff]" />
-                      </div>
-                      <button onClick={() => downloadItemsToDevice(collection.seasons.flatMap((season) => season.items))} className="mb-3 inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs text-[#d0d6e0]"><Download className="h-3.5 w-3.5" /> Télécharger la collection sur mon appareil</button>
+                      <button onClick={() => downloadItemsToDevice(collectionItems)} className="mb-3 inline-flex h-9 items-center gap-2 rounded-lg border border-white/[0.08] px-3 text-xs text-[#d0d6e0]"><Download className="h-3.5 w-3.5" /> Télécharger la collection sur mon appareil</button>
                       <div className="space-y-3">
                         {collection.seasons.map((season) => (
                           <div key={season.season} className="rounded-lg border border-white/[0.06] p-2">
@@ -138,8 +143,10 @@ export function MediaVaultDashboard({ initialItems = [], initialSource = "loadin
                           </div>
                         ))}
                       </div>
+                      </div>
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -160,15 +167,7 @@ function MediaCard({ item }: { item: MediaItem }) {
   return (
     <article className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02] transition hover:border-[#7170ff]/40 hover:bg-white/[0.04]">
       <Link href={`/media/${encodeURIComponent(item.id)}`} className="block">
-        <div className="relative flex aspect-video items-center justify-center bg-[radial-gradient(circle_at_30%_20%,rgba(113,112,255,.35),transparent_35%),linear-gradient(135deg,#191a1b,#08090a)]">
-          {item.thumbnailPath ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={`/api/media/${encodeURIComponent(item.id)}/thumbnail`} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <Play className="h-10 w-10 rounded-full bg-black/30 p-2 text-white" />
-          )}
-          <span className="absolute left-3 top-3 rounded-full bg-black/45 px-2 py-1 text-xs text-[#d0d6e0]">{typeLabels[item.type]}</span>
-        </div>
+        <PosterFrame item={item} title={item.title} subtitle={`${item.sourceGroup} · ${item.quality || item.format || item.size}`} badge={typeLabels[item.type]} />
       </Link>
       <div className="space-y-3 p-3">
         <div className="min-w-0">
@@ -183,5 +182,25 @@ function MediaCard({ item }: { item: MediaItem }) {
         </div>
       </div>
     </article>
+  );
+}
+
+function PosterFrame({ item, title, subtitle, badge }: { item?: MediaItem; title: string; subtitle?: string; badge: string }) {
+  return (
+    <div className="relative flex aspect-video overflow-hidden bg-[radial-gradient(circle_at_18%_10%,rgba(113,112,255,.45),transparent_30%),radial-gradient(circle_at_85%_30%,rgba(15,174,201,.22),transparent_34%),linear-gradient(135deg,#191a1b,#060708)]">
+      {item?.thumbnailPath ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={`/api/media/${encodeURIComponent(item.id)}/thumbnail`} alt={title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+      ) : (
+        <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(255,255,255,.10),transparent_35%),radial-gradient(circle_at_65%_30%,rgba(113,112,255,.35),transparent_30%)]" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/25" />
+      <span className="absolute left-3 top-3 rounded-full bg-black/55 px-2 py-1 text-xs text-[#d0d6e0] backdrop-blur">{badge}</span>
+      <div className="absolute bottom-0 left-0 right-0 p-3">
+        <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-white drop-shadow">{title}</h3>
+        {subtitle && <p className="mt-1 truncate text-xs text-[#d0d6e0]">{subtitle}</p>}
+      </div>
+      <div className="absolute right-3 top-3 rounded-full bg-black/45 p-2 text-white backdrop-blur"><Play className="h-4 w-4" /></div>
+    </div>
   );
 }
